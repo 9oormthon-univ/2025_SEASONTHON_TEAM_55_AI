@@ -56,6 +56,10 @@ def root():
         "docs": "/docs"
     }
 
+@app.get("/favicon.ico")
+def favicon():
+    return {"message": "No favicon"}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

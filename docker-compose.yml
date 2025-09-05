@@ -10,6 +10,8 @@ services:
       - "5001:5001"
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - YOUTH_API_KEY=${YOUTH_API_KEY}
+      - JUSO_API_KEY=${JUSO_API_KEY}
     env_file:
       - .env
     volumes:
