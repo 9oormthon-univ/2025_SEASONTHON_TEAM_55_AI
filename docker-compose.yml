@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  pingrow-chatbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pingrow-chatbot
+    ports:
+      - "5001:5001"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    env_file:
+      - .env
+    volumes:
+      - ./economic_terms_faiss:/app/economic_terms_faiss:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - pingrow-network
+
+networks:
+  pingrow-network:
+    driver: bridge
