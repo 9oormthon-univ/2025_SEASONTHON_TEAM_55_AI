@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from .youth_policy.routes import router as youth_policy_router
 from .chatbot.routes import router as chatbot_router
+import os
 
 app = FastAPI(
     title="통합 API 서버",
@@ -42,11 +45,22 @@ app.add_middleware(
     ],
 )
 
+# 정적 파일 서빙 설정
+static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resource", "chatbot")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
 app.include_router(youth_policy_router, prefix="/youth-policy", tags=["청년정책"])
 app.include_router(chatbot_router, prefix="/chatbot", tags=["경제용어 챗봇"])
 
 @app.get("/")
 def root():
+    # 챗봇 UI로 리다이렉트
+    static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resource", "chatbot")
+    index_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    
     return {
         "message": "통합 API 서버",
         "services": {

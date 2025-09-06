@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PinGrow ChatBot</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="chat-container">
+        <header class="chat-header">
+            <div class="header-content">
+                <div class="chat-title">
+                    <h2>PinGrow ChatBot</h2>
+                    <span class="online-status">온라인</span>
+                </div>
+                <div class="header-actions">
+                    <button class="menu-btn">⋮</button>
+                </div>
+            </div>
+        </header>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="date-divider">
+                <span class="date-text">오늘</span>
+            </div>
+            <div class="message bot-message">
+                <div class="message-avatar">🤖</div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        안녕하세요! PinGrow ChatBot입니다. 무엇을 도와드릴까요?
+                    </div>
+                    <div class="message-time">오후 2:30</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <div class="input-wrapper">
+                <input type="text" id="messageInput" placeholder="메시지를 입력하세요..." maxlength="1000">
+                <button id="sendButton" class="send-button" disabled>
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor" d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
