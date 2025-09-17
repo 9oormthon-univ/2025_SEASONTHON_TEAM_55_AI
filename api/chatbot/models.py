@@ -24,8 +24,8 @@ class EconomicChatbot:
         
         self.qa_chain = RetrievalQA.from_chain_type(
             llm=ChatOpenAI(
-                model="gpt-3.5-turbo", 
-                temperature=0, 
+                model="gpt-4o-mini",
+                temperature=0,
                 openai_api_key=self.api_key
             ),
             retriever=self.retriever,
