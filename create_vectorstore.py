@@ -10,15 +10,28 @@ import re
 def load_pdf_pages():
     #PDF 파일에서 필요한 페이지들 가져오기
     print("PDF 파일 로드 중...")
-    loader = PyPDFLoader("word.pdf")
-    pages = loader.load()
-    
+
+    # 금융 용어 PDF 로드
+    print("금융 용어 PDF 로드 중...")
+    word_loader = PyPDFLoader("word.pdf")
+    word_pages = word_loader.load()
+
     # 18~369 페이지 추출 (인덱스 17~368)
-    selected_pages = pages[17:369]
-    print(f"{len(selected_pages)}개 페이지 추출 완료")
-    
-    # 전체 텍스트로 합치기
-    return "\n".join([page.page_content for page in selected_pages])
+    selected_word_pages = word_pages[17:369]
+    print(f"금융 용어 PDF: {len(selected_word_pages)}개 페이지 추출 완료")
+
+    # IPO PDF 로드
+    print("IPO PDF 로드 중...")
+    ipo_loader = PyPDFLoader("ipo.pdf")
+    ipo_pages = ipo_loader.load()
+    print(f"IPO PDF: {len(ipo_pages)}개 페이지 추출 완료")
+
+    # 두 PDF의 텍스트 합치기
+    word_text = "\n".join([page.page_content for page in selected_word_pages])
+    ipo_text = "\n".join([page.page_content for page in ipo_pages])
+
+    # 구분자를 추가하여 두 텍스트 결합
+    return word_text + "\n\n===IPO_CONTENT_START===\n\n" + ipo_text
 
 def clean_pdf_text(text):
     """PDF 텍스트 전처리"""
@@ -87,10 +100,33 @@ def process_line_breaks(text):
 def parse_economic_terms(text):
     #경제용어들을 파싱하여 구조화된 문서로 변환
     print("용어 파싱 중...")
-    
+
+    documents = []
+
+    # IPO 컨텐츠와 일반 금융 용어 분리
+    if "===IPO_CONTENT_START===" in text:
+        word_text, ipo_text = text.split("===IPO_CONTENT_START===", 1)
+
+        # 일반 금융 용어 파싱
+        print("일반 금융 용어 파싱 중...")
+        word_documents = parse_word_terms(word_text)
+        documents.extend(word_documents)
+
+        # IPO 컨텐츠 파싱
+        print("IPO 컨텐츠 파싱 중...")
+        ipo_documents = parse_ipo_content(ipo_text)
+        documents.extend(ipo_documents)
+    else:
+        # IPO 구분자가 없는 경우 기존 방식으로 파싱
+        documents = parse_word_terms(text)
+
+    return documents
+
+def parse_word_terms(text):
+    #기존 금융 용어 파싱 로직
     lines = text.strip().split("\n")
     documents = []
-    
+
     i = 0
     while i < len(lines):
         # 용어명 추출
@@ -113,7 +149,7 @@ def parse_economic_terms(text):
                 match = re.match(r"연관검색어\s*:\s*(.*)", line)
                 if match:
                     related_terms = match.group(1).strip()
-                
+
                 # 다음 줄 확인
                 if i + 1 < len(lines):
                     next_line = lines[i + 1].strip()
@@ -138,7 +174,38 @@ def parse_economic_terms(text):
         # 문서 생성
         if term.strip():  # 빈 용어 제외
             content = f"용어: {term}\n설명: {explanation}\n관련용어: {related_terms}"
-            documents.append(Document(page_content=content, metadata={"term": term}))
+            documents.append(Document(page_content=content, metadata={"term": term, "source": "financial_terms"}))
+
+    return documents
+
+def parse_ipo_content(text):
+    #IPO 컨텐츠를 청크 단위로 파싱
+    documents = []
+
+    # IPO 텍스트를 문단 단위로 분할
+    paragraphs = text.split('\n\n')
+
+    for i, paragraph in enumerate(paragraphs):
+        paragraph = paragraph.strip()
+        if len(paragraph) > 100:  # 너무 짧은 문단은 제외
+            # IPO 관련 키워드로 제목 추출 시도
+            lines = paragraph.split('\n')
+            title = lines[0] if lines else f"IPO 섹션 {i+1}"
+
+            # IPO 키워드 포함 확인
+            ipo_keywords = ['IPO', 'ipo', '공개', '상장', '공모', '주식', '투자', '기업공개']
+            has_ipo_keyword = any(keyword in paragraph for keyword in ipo_keywords)
+
+            if has_ipo_keyword or len(paragraph) > 200:
+                content = f"주제: {title}\n내용: {paragraph}\n분야: IPO"
+                documents.append(Document(
+                    page_content=content,
+                    metadata={
+                        "term": title,
+                        "source": "ipo_guide",
+                        "type": "ipo_content"
+                    }
+                ))
 
     return documents
 
