@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from .youth_policy.routes import router as youth_policy_router
 from .chatbot.routes import router as chatbot_router
+from .portfolio.routes import router as portfolio_router
 import os
 
 app = FastAPI(
@@ -52,6 +53,7 @@ if os.path.exists(static_dir):
 
 app.include_router(youth_policy_router, prefix="/youth-policy", tags=["청년정책"])
 app.include_router(chatbot_router, prefix="/chatbot", tags=["경제용어 챗봇"])
+app.include_router(portfolio_router, prefix="/portfolio", tags=["포트폴리오 추천"])
 
 @app.get("/")
 def root():
@@ -65,7 +67,8 @@ def root():
         "message": "통합 API 서버",
         "services": {
             "청년정책": "/youth-policy",
-            "경제용어챗봇": "/chatbot"
+            "경제용어챗봇": "/chatbot",
+            "포트폴리오추천": "/portfolio"
         },
         "docs": "/docs"
     }
