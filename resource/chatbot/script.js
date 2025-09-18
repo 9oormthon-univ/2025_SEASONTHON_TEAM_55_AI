@@ -4,8 +4,11 @@ class ChatBot {
         this.sendButton = document.getElementById('sendButton');
         this.chatMessages = document.getElementById('chatMessages');
         this.isTyping = false;
-        
+        this.websocket = null;
+        this.currentBotMessage = null;
+
         this.init();
+        this.connectWebSocket();
     }
 
     init() {
@@ -37,16 +40,20 @@ class ChatBot {
         this.sendButton.disabled = true;
         this.messageInput.focus();
 
-        this.showTypingIndicator();
-        
-        try {
-            const response = await this.sendToAPI(message);
-            this.hideTypingIndicator();
-            this.addMessage(response, 'bot');
-        } catch (error) {
-            this.hideTypingIndicator();
-            this.addMessage('죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.', 'bot');
-            console.error('API Error:', error);
+        if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+            this.sendWebSocketMessage(message);
+        } else {
+            // Fallback to HTTP API
+            this.showTypingIndicator();
+            try {
+                const response = await this.sendToAPI(message);
+                this.hideTypingIndicator();
+                this.addMessage(response, 'bot');
+            } catch (error) {
+                this.hideTypingIndicator();
+                this.addMessage('죄송합니다. 오류가 발생했습니다. 다시 시도해주세요.', 'bot');
+                console.error('API Error:', error);
+            }
         }
     }
 
@@ -157,6 +164,106 @@ class ChatBot {
         setTimeout(() => {
             this.chatMessages.scrollTop = this.chatMessages.scrollHeight;
         }, 100);
+    }
+
+    connectWebSocket() {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/chatbot/ws`;
+
+        try {
+            this.websocket = new WebSocket(wsUrl);
+
+            this.websocket.onopen = () => {
+                console.log('WebSocket connected');
+            };
+
+            this.websocket.onmessage = (event) => {
+                this.handleWebSocketMessage(JSON.parse(event.data));
+            };
+
+            this.websocket.onclose = () => {
+                console.log('WebSocket disconnected');
+                // 재연결 시도
+                setTimeout(() => this.connectWebSocket(), 3000);
+            };
+
+            this.websocket.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        } catch (error) {
+            console.error('WebSocket connection failed:', error);
+        }
+    }
+
+    sendWebSocketMessage(message) {
+        this.showTypingIndicator();
+        this.websocket.send(JSON.stringify({ message: message }));
+    }
+
+    handleWebSocketMessage(data) {
+        switch (data.type) {
+            case 'start':
+                // 응답 시작 - 타이핑 표시기는 이미 표시중
+                break;
+
+            case 'chunk':
+                this.handleStreamingChunk(data.content);
+                break;
+
+            case 'complete':
+                this.finalizeStreamingResponse(data);
+                break;
+
+            case 'error':
+                this.hideTypingIndicator();
+                this.addMessage(data.message, 'bot');
+                break;
+        }
+    }
+
+    handleStreamingChunk(content) {
+        if (!this.currentBotMessage) {
+            this.hideTypingIndicator();
+            this.createStreamingMessage();
+        }
+
+        const messageBubble = this.currentBotMessage.querySelector('.message-bubble');
+        messageBubble.innerHTML += this.escapeHtml(content);
+        this.scrollToBottom();
+    }
+
+    createStreamingMessage() {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message bot-message';
+
+        const currentTime = new Date().toLocaleTimeString('ko-KR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        messageDiv.innerHTML = `
+            <div class="message-avatar">🤖</div>
+            <div class="message-content">
+                <div class="message-bubble"></div>
+                <div class="message-time">${currentTime}</div>
+            </div>
+        `;
+
+        this.chatMessages.appendChild(messageDiv);
+        this.currentBotMessage = messageDiv;
+        this.scrollToBottom();
+    }
+
+    finalizeStreamingResponse(data) {
+        this.currentBotMessage = null;
+        this.isTyping = false;
+        this.sendButton.disabled = false;
+
+        // 관련 용어나 메타데이터 추가 처리 가능
+        if (data.related_terms && data.related_terms.length > 0) {
+            console.log('Related terms:', data.related_terms);
+        }
     }
 
     addWelcomeMessages() {
